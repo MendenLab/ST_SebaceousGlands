@@ -1,0 +1,60 @@
+# Compressed R data files
+*.RData
+*.Rdata
+*.rdata
+*.RDS
+*.rds
+
+# Anndata objects and files
+*.hdf5
+*.h5
+
+# General files
+*.ini
+*.pdf
+*.csv
+*.xlsx
+*.png
+*.txt
+*.html
+
+# Database files
+*.sql
+.*db
+
+# Temporary or history files
+tmp_dir*
+tmp_run*
+*_cache
+.DS_Store
+*/.DS_Store
+.Rhistory
+*/__pycache__/
+__pycache__/
+.idea/
+*/.idea/
+/.idea/
+
+# Files for genotypes / genomic annotations
+*.bam
+*.bai
+*.bed
+*.bim
+*.fam
+*.ped
+*.map
+*.vcf
+*.vcf.bgz
+*.bgz.tbi
+*.fasta
+*.fa
+
+# Archive files (usually huge)
+*.tar.gz
+
+# All input and output directories
+data/
+.Rproj.user
+
+# Included .csv files
+!/input/cell_cycle/Macosko_cell_cycle_genes_2015.csv
