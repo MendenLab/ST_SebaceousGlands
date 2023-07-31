@@ -4,7 +4,7 @@ rm(list = ls(all=TRUE))
 set.seed(1)
 
 # R packages
-rlibs <- c("dplyr", "stringr", "tibble", "xlsx", 'hash', 'pheatmap')
+rlibs <- c("dplyr", "stringr", "tibble", "xlsx", 'hash', 'pheatmap', 'VennDiagram', 'ggvenn')
 invisible(lapply(rlibs, require, character.only = TRUE))
 # Bioconductor packages
 bioclibs <- c("ReactomePA", "pathview",  "enrichplot", "org.Hs.eg.db", 'DOSE', 'clusterProfiler')
@@ -57,7 +57,7 @@ show_dotplot_categories = 15
 show_categories = 10
 
 width_img = 8
-height_img = 8
+height_img = 12
 
 selected.database = 'Reactome'
 
@@ -77,7 +77,8 @@ all_filenames = list.files(path = input.dir, pattern = c("*.xlsx"), recursive = 
 degs.name = all_filenames[grepl("*AEH*", all_filenames) & grepl("*corrected*", all_filenames)]
 # Get unique specimens
 # specimens <- sapply(str_split(sapply(str_split(degs.name, pattern='_'), "[[", 10), pattern='/'), "[[", 5)
-specimens <- sapply(str_split(sapply(str_split(degs.name, pattern='_'), "[[", 12), pattern='/'), "[[", 2)
+specimens <- sapply(str_split(sapply(
+  str_split(degs.name, pattern='_'), "[[", 12), pattern='/'), "[[", 2)
 
 # File to check which genes were used for pathway analysis
 used_degs = c()
@@ -131,6 +132,7 @@ for (specimen in specimens)
   
   
   ################### Get significantly DEx genes and background genes
+  enriched.pas <- hash::hash()
   # Per pattern 
   for (pattern.name in patterns) 
   {
@@ -193,7 +195,10 @@ for (specimen in specimens)
     }
     
     used_degs <- c(used_degs, df.dge_res.patterns$hgnc_symbol)
+    enriched.pas[[as.character(pattern.name)]] <- list(enricher.ref@result$Description[
+      enricher.ref@result$p.adjust < 0.05])
   }
+  
   # Save used genes per specimen enriched in Sebaceous Glands
   write.table(used_degs, file.path(
     tmp_output.dir, paste0(specimen, '_ORA_REACTOME.txt', sep='')), 

@@ -79,7 +79,7 @@ showCategories = intersect(enrich.obj$Description, showCategories)
 png(
   filename = file.path(
     save_dir, '5_DGE_Approaches_Glands_modifiedPS_20210507__SEB G, PSO, L__Cnetplot.png'),
-  width = 20, height = 6, units = "in", bg = "white", res = 300)
+  width = 25, height = 6, units = "in", bg = "white", res = 300)
 p1 <- clusterProfiler::cnetplot(enrich.obj, showCategory = showCategories, 
                           categorySize = "pvalue", foldChange = entrezid_log2fc, 
                           colorEdge = TRUE) + 

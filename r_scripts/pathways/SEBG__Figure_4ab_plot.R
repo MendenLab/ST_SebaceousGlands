@@ -32,15 +32,19 @@ def.plot_cnet <- function(func_enrich.obj, func_categories, func_entrezidlog2fc,
     filename = file.path(output.dir, func_title),
     width = width, height = height, units = "in", bg = "white", res = 300)
   p1 <- clusterProfiler::cnetplot(
-    func_enrich.obj, showCategory = func_categories, 
-    categorySize = "pvalue", color.params = list(foldChange = func_entrezidlog2fc), colorEdge = TRUE) + 
-    ggtitle("REACTOME: Pathway Enrichment Analysis using DB Reactome") 
+    func_enrich.obj, showCategory = func_categories, cex_label_category=1.5,
+    cex_label_gene=1.2, 
+    categorySize = "p.adjust", color.params = list(foldChange = func_entrezidlog2fc), 
+    colorEdge = TRUE) + 
+    ggtitle("") 
   # Color upper and lower border
   min.value <- floor( min(p1$data$color, na.rm = TRUE) )
   max.value <- ceiling( max(p1$data$color, na.rm = TRUE) )
   
   p1 <- p1 + scale_color_gradientn(
-    name = "fold change", colours = c("blue", "red"), limits= c(min.value, max.value))
+    name = "fold change", colours = c("blue", "red"), limits= c(min.value, max.value)) +
+    theme(legend.position="bottom", 
+          legend.text = element_text(size = 14), legend.title = element_text(size = 16)) 
   cowplot::plot_grid(p1, ncol = 1, nrow = 1)
   print(p1)
   dev.off()
@@ -256,7 +260,7 @@ showCategories <- c('The citric acid (TCA) cycle and respiratory electron transp
 def.plot_cnet(func_enrich.obj=enrich.obj.comparison_a, func_categories=showCategories, 
               func_entrezidlog2fc=entrezid_log2fc_com.a, output.dir=save_dir, 
               func_title='20210616_LvsNL__SEB G, L, AE vs SEB G, NL__condition 1_vs_condition 2_Cnetplot.png', 
-              width = 20, height=6) 
+              width = 25, height=6) 
 # show top 5
 # showCategories <- c('Keratinization',
 #                     'Acyl chain remodelling of PI', 

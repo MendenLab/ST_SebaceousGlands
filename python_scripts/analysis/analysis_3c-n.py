@@ -112,8 +112,8 @@ def main(path_adata, save_folder):
     # Get common SVGs between Pso and AD
     com_genes = get_commonly_regulated_genes(a=svg['Pso'], b=svg['AD'])
     # Get unique SVGs
-    unique_disease = {'AD': get_uniquely_regulated_genes(a=svg['AD'], rem_b=com_genes),
-                      'Pso': get_uniquely_regulated_genes(a=svg['Pso'], rem_b=com_genes)}
+    unique_disease = {'AD': list(get_uniquely_regulated_genes(a=svg['AD'], rem_b=com_genes)),
+                      'Pso': list(get_uniquely_regulated_genes(a=svg['Pso'], rem_b=com_genes))}
     df_unique = pd.DataFrame(dict([(k, pd.Series(v)) for k, v in unique_disease.items()]))
 
     svgs_partioned = {'Shared': list(com_genes),
