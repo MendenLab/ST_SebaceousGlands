@@ -1,5 +1,6 @@
 import scanpy as sc
 import pandas as pd
+import numpy as np
 
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -31,16 +32,34 @@ def plot_image(img_rotated, df, disease, specimen, biopsy_type, save_folder, inv
     plt.close()
 
 
+def export_legend(legend, save_folder, ncol, key, filename="legend", expand=[-5, -5, 5, 5]):
+    # https://stackoverflow.com/questions/4534480/get-legend-as-a-separate-picture-in-matplotlib
+    fig = legend.figure
+    sns.despine(left=True, bottom=True, fig=fig)
+    fig.canvas.draw()
+    # bbox = legend.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+    bbox = legend.get_window_extent()
+    bbox = bbox.from_extents(*(bbox.extents + np.array(expand)))
+    bbox = bbox.transformed(fig.dpi_scale_trans.inverted())
+    # fig.tight_layout()
+    fig.savefig(os.path.join(save_folder, "{}_{}_{}{}".format(filename, ncol, key, '.pdf')), dpi='figure',
+                bbox_inches=bbox)
+    plt.close(fig=fig)
+
+
 def main(path_adata, save_folder):
-    h5files = ['2-V19S23-004-V4_2_AD_LESIONAL', '10-V19T12-025-V4_10_Pso_LESIONAL']
+    h5files = ['10-V19T12-025-V3_10_Pso_LESIONAL', '11-V19T12-012-V1_11_AD_NON LESIONAL', '2-V19S23-004-V3_2_AD_LESIONAL']
 
     adata = sc.read(os.path.join(path_adata, 'st_QC_normed_BC_project_PsoAD.h5'))
+    adata.uns['spot_type_colors'] = np.asarray(
+        ['#1f77b4', '#ff7f0e', '#279e68', '#d62728', '#e377c2', '#8c564b',
+         '#aa40fc', '#b5bd61', '#17becf', '#aec7e8'])
 
     specimens = []
     writer = pd.ExcelWriter(os.path.join(save_folder, "Plots_HE_images_spottypes.xlsx"), engine='xlsxwriter')
 
-    invert_x = {'2-V19S23-004-V4_2': True, '10-V19T12-025-V4_10': True}
-    invert_y = {'2-V19S23-004-V4_2': True, '10-V19T12-025-V4_10': True}
+    invert_x = {'10-V19T12-025-V3_10': True,  '11-V19T12-012-V1_11': True, '2-V19S23-004-V3_2': True}
+    invert_y = {'10-V19T12-025-V3_10': True,  '11-V19T12-012-V1_11': False, '2-V19S23-004-V3_2': True}
 
     # Read out specimen
     for filename in h5files:
@@ -53,17 +72,29 @@ def main(path_adata, save_folder):
         disease = adata_sample.obs['DISEASE'].cat.categories[0]
         sample = adata_sample.obs['sample'].cat.categories[0]
 
-        fig, ax = plt.subplots(figsize=(8, 6))
-        sc.pl.spatial(adata=adata_sample, color='spot_type', library_id=sample, ax=ax, title='', show=False)
+        fig, ax = plt.subplots(figsize=(10, 10))
+        sc.pl.spatial(adata=adata_sample, color='spot_type', library_id=sample, ax=ax, title='', show=False,
+                      legend_loc='best')
         if invert_x[specimen]:
             ax.invert_xaxis()
         if invert_y[specimen]:
             ax.invert_yaxis()
         ax.axes.get_xaxis().set_visible(False)
         ax.axes.get_yaxis().set_visible(False)
+        # # Put a legend below current axis
+        # leg = ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05), title='',
+        #                 fancybox=True, shadow=True, ncol=10, prop={'size': 16}, frameon=False, title_fontsize=14)
         plt.tight_layout()
         plt.savefig(os.path.join(save_folder, 'HE_image_{}_{}_{}.pdf'.format(specimen, disease, biopsy_type)))
         plt.close()
+
+        # Plot legend separately - Needs to be run in debugging mode
+        labels = list(adata.obs['spot_type'].cat.categories)
+        f = lambda m, c: plt.plot([], [], marker='o', color=c, ls="none")[0]
+        handles = [f("s", adata.uns['spot_type_colors'][i]) for i in range(len(adata.uns['spot_type_colors']))]
+
+        legend = plt.legend(handles, labels, loc=3, framealpha=1, frameon=False, ncol=10, prop={'size': 22})
+        export_legend(legend, save_folder=save_folder, ncol=10, key='spot_type')
 
         # convert spot types to colors
         color_mapping = dict(zip(adata_sample.obs['spot_type'].cat.categories,
@@ -93,7 +124,7 @@ if __name__ == '__main__':
     today = date.today()
     savepath = os.path.join(
         "/Volumes/CH__data/Projects/Eyerich_AG_projects/ST_Sebaceous_glands__Peter_Seiringer/output",
-        "figure_3mn__spatialDE_HE_images", str(today))
+        "Fig_S2abc", str(today))
     os.makedirs(savepath, exist_ok=True)
 
     adata_path = '/Volumes/CH__data/Projects/Eyerich_AG_projects/ST_Sebaceous_glands__Peter_Seiringer/output/spatialDE/2023-04-12_paper_figures'

@@ -12,7 +12,7 @@ def main(adata, save_folder):
         ['DERMIS', 'upper EPIDERMIS', 'middle EPIDERMIS', 'basal EPIDERMIS', 'JUNCTION'])].copy()
 
     fig, ax = plt.subplots(figsize=(6, 6))
-    sc.pl.umap(adata=adata, color='biopsy_type', ax=ax, show=False, title='')
+    sc.pl.umap(adata=adata, color='biopsy_type', ax=ax, show=False, title='', palette=['darkorange', 'darkgreen'])
     sns.despine(fig=fig, ax=ax)
     ax.set_ylabel('UMAP2', fontsize=18)
     ax.set_xlabel('UMAP1', fontsize=18)
@@ -27,7 +27,7 @@ def main(adata, save_folder):
     plt.close()
 
     fig, ax = plt.subplots(figsize=(8, 6))
-    sc.pl.umap(adata=adata, color='biopsy_type', ax=ax, show=False, title='')
+    sc.pl.umap(adata=adata, color='biopsy_type', ax=ax, show=False, title='', palette=['darkorange', 'darkgreen'])
     sns.despine(fig=fig, ax=ax)
     ax.set_ylabel('UMAP2', fontsize=18)
     ax.set_xlabel('UMAP1', fontsize=18)

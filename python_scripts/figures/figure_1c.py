@@ -56,11 +56,11 @@ def main(path_adata, save_folder):
     specimens = []
     writer = pd.ExcelWriter(os.path.join(save_folder, "Plots_AEH_Pattern.xlsx"), engine='xlsxwriter')
 
-    invert = {'11-V19T12-012-V2_11': True}
+    invert = {'2-V19S23-004-V4_2': True}
     # (width, height)
-    figure_sizes = {'11-V19T12-012-V2_11': (6, 5)}
+    figure_sizes = {'2-V19S23-004-V4_2': (6, 5)}
 
-    filename = '11-V19T12-012-V2_11_AD_NON LESIONAL'
+    filename = '2-V19S23-004-V4_2_AD_LESIONAL'
 
     print('File: {}'.format(filename))
     specimen = "_".join(filename.split(sep='_')[:-2])
@@ -104,7 +104,7 @@ if __name__ == '__main__':
     today = date.today()
     savepath = os.path.join(
         "/Volumes/CH__data/Projects/Eyerich_AG_projects/ST_Sebaceous_glands__Peter_Seiringer/output",
-        "fiure_2a__spatialDE_AEH_patterns", str(today))
+        "figure_1c", str(today))
     os.makedirs(savepath, exist_ok=True)
 
     adata_path = '/Volumes/CH__data/Projects/Eyerich_AG_projects/ST_Sebaceous_glands__Peter_Seiringer/output/spatialDE/2023-04-12_paper_figures'

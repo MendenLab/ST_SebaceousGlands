@@ -1,5 +1,6 @@
 import scanpy as sc
 import pandas as pd
+import numpy as np
 
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -32,6 +33,9 @@ def plot_image(img_rotated, df, disease, specimen, biopsy_type, save_folder, inv
 
 def main(path_adata, save_folder):
     adata = sc.read(os.path.join(path_adata, 'st_QC_normed_BC_project_PsoAD.h5'))
+    adata.uns['spot_type_colors'] = np.asarray(
+        ['#1f77b4', '#ff7f0e', '#279e68', '#d62728', '#e377c2', '#8c564b',
+         '#aa40fc', '#b5bd61', '#17becf', '#aec7e8'])
 
     writer = pd.ExcelWriter(os.path.join(save_folder, "Plots_HE_images_spottypes.xlsx"), engine='xlsxwriter')
 
@@ -47,7 +51,7 @@ def main(path_adata, save_folder):
     disease = adata_sample.obs['DISEASE'].cat.categories[0]
     sample = adata_sample.obs['sample'].cat.categories[0]
 
-    fig, ax = plt.subplots(figsize=(8, 6))
+    fig, ax = plt.subplots(figsize=(6, 8))
     sc.pl.spatial(adata=adata_sample, color='spot_type', library_id=sample, ax=ax, title='', show=False)
     if invert_x[specimen]:
         ax.invert_xaxis()
@@ -55,6 +59,9 @@ def main(path_adata, save_folder):
         ax.invert_yaxis()
     ax.axes.get_xaxis().set_visible(False)
     ax.axes.get_yaxis().set_visible(False)
+    # Put a legend below current axis
+    ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05), title='',
+              fancybox=True, shadow=True, ncol=3, prop={'size': 10}, frameon=False, title_fontsize=14)
     plt.tight_layout()
     plt.savefig(os.path.join(save_folder, 'HE_image_{}_{}_{}.pdf'.format(specimen, disease, biopsy_type)))
     plt.close()
@@ -88,7 +95,7 @@ if __name__ == '__main__':
     today = date.today()
     savepath = os.path.join(
         "/Volumes/CH__data/Projects/Eyerich_AG_projects/ST_Sebaceous_glands__Peter_Seiringer/output",
-        "figure_2b__spatialDE_HE_images", str(today))
+        "figure_2j__spatialDE_HE_images", str(today))
     os.makedirs(savepath, exist_ok=True)
 
     adata_path = '/Volumes/CH__data/Projects/Eyerich_AG_projects/ST_Sebaceous_glands__Peter_Seiringer/output/spatialDE/2023-04-12_paper_figures'

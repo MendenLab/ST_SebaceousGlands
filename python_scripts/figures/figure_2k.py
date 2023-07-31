@@ -14,18 +14,18 @@ import os
 from datetime import date
 
 
-fontsize_xylabel = 14
-fontsize_xyticks = 12
-fontsize_legend_title = 12
-fontsize_text = 10
-fontsize_legend = 10
+fontsize_xylabel = 22
+fontsize_xyticks = 20
+fontsize_legend_title = 20
+fontsize_text = 20
+fontsize_legend = 18
 
 
 def plot_boxplot(adata, df_melt, num_patterns, specimen, disease, biopsy_type, save_folder, obs='SEBACEOUS GLAND'):
 
     box_pairs = [((p, 0), (p, 1)) for p in range(num_patterns)]
 
-    fig, ax = plt.subplots(figsize=(8, 6))
+    fig, ax = plt.subplots(figsize=(10, 6))
     sns.boxplot(
         data=df_melt, x='variable', y='value', hue=obs, ax=ax,
         palette=[adata.uns['spot_type_colors'][
@@ -53,7 +53,7 @@ def plot_boxplot(adata, df_melt, num_patterns, specimen, disease, biopsy_type, s
                                            adata.obs['spot_type'].cat.categories.str.contains(obs)][0], 'grey']}
     # Transform each p-value to "p=" in scientific notation
     test_result_pvals = [result.__dict__['pval'] for result in test_result]
-    formatted_pvalues = ["padj={:.2e}".format(pvalue) if pvalue < 0.05 else "ns" for pvalue in test_result_pvals]
+    formatted_pvalues = ["{:.2e}".format(pvalue) if pvalue < 0.05 else "ns" for pvalue in test_result_pvals]
 
     # adjust order of statsannot pvals to match normal order
     test_result_dicts = [result.__dict__ for result in test_result]
@@ -63,11 +63,13 @@ def plot_boxplot(adata, df_melt, num_patterns, specimen, disease, biopsy_type, s
     formatted_pvalues = np.asarray(formatted_pvalues)[ind_neworder]
 
     # Plot with formatted p-vales
-    fig, ax = plt.subplots(figsize=(10, 6))
+    fig, ax = plt.subplots(figsize=(14, 6))
     sns.boxplot(**plotting_parameters)
     # Add annotations
     annotator = Annotator(ax, box_pairs, **plotting_parameters)
     annotator.set_custom_annotations(formatted_pvalues)
+    # annotator.get_configuration()
+    annotator.pvalue_format.fontsize = fontsize_text
     annotator.annotate()
     sns.despine(fig=fig, ax=ax)
     ax.set_xlabel('Pattern', fontsize=fontsize_xylabel)
@@ -176,9 +178,9 @@ if __name__ == '__main__':
     today = date.today()
     savepath = os.path.join(
         "/Volumes/CH__data/Projects/Eyerich_AG_projects/ST_Sebaceous_glands__Peter_Seiringer/output",
-        "figure_2c_spatialDE_SG_enrichment", str(today))
+        "figure_2k_spatialDE_SG_enrichment", str(today))
     os.makedirs(savepath, exist_ok=True)
 
-    adata_path = '/Volumes/CH__data/Projects/Eyerich_AG_projects/ST_Sebaceous_glands__Peter_Seiringer/output/spatialDE/2023-04-12'
+    adata_path = '/Volumes/CH__data/Projects/Eyerich_AG_projects/ST_Sebaceous_glands__Peter_Seiringer/output/spatialDE/2023-04-12_paper_figures'
 
     main(path_adata=adata_path, save_folder=savepath)

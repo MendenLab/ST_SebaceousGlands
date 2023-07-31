@@ -27,7 +27,9 @@ def plot_svgs(
     for gene in auto_corr_genes:
         fig, ax = plt.subplots(figsize=figure_sizes)
         sc.pl.spatial(
-            adata, color=gene, size=1, cmap='Reds', library_id=sample, show=False, ax=ax, layer='counts')
+            adata, color=gene, size=1, cmap='Reds', library_id=sample, show=False, ax=ax,
+            layer='counts')
+        ax.set_title(gene, fontsize=16)
         if invert_x:
             ax.invert_xaxis()
         if invert_y:
