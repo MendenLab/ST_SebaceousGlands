@@ -46,6 +46,9 @@ def save_sg_stats(df, save_folder):
 
 
 def main(adata, save_folder):
+    # keep used sample in analysis
+    # adata = adata[adata.obs['sample'].isin(
+    #     ['P16357_1035', 'P16357_1036', 'P16357_1003', 'P16357_1004', 'P16357_1037', 'P16357_1038'])].copy()  # 212
 
     df = adata.obs[['DISEASE', 'spot_type', 'biopsy_type', 'patient']]
 
@@ -62,8 +65,13 @@ if __name__ == '__main__':
         "data_statistics", str(today))
     os.makedirs(savepath, exist_ok=True)
 
-    spatial_adata = sc.read('/Users/christina.hillig/PycharmProjects/ST_Immune_publication/Publication_analysis/adata_storage/2022-04-08/st_QC_normed_BC_project_PsoADLP.h5')
+    spatial_adata = sc.read(
+        '/Volumes/CH__data/Projects/data/annData_objects/spatial/2022-04-08/st_QC_normed_BC_project_PsoADLP.h5')
     # Remove LP
     spatial_adata = spatial_adata[spatial_adata.obs['DISEASE'] != 'LP'].copy()
+
+    # adata_filename = '2021-07-29_Visium_Data_QC_BC_clustered.h5'
+    # spatial_adata = sc.read(os.path.join('/Volumes/CH__data/Projects/data/annData_objects/spatial/2021-07-29',
+    #                                      adata_filename))
 
     main(adata=spatial_adata, save_folder=savepath)
