@@ -7,6 +7,10 @@ from datetime import date
 
 
 def main(adata, save_folder):
+    # drop all samples from newest cohort
+    new_samples = list(adata.obs['sample'].cat.categories[adata.obs['sample'].cat.categories.str.contains('P21093')])
+    adata = adata[~adata.obs['sample'].isin(new_samples)].copy()
+
     # Remove Epidermis and Dermis
     adata = adata[~adata.obs['spot_type'].isin(
         ['DERMIS', 'upper EPIDERMIS', 'middle EPIDERMIS', 'basal EPIDERMIS', 'JUNCTION'])].copy()
@@ -53,6 +57,7 @@ if __name__ == '__main__':
     spatial_adata = sc.read(
         '/Volumes/CH__data/Projects/data/annData_objects/spatial/2022-04-08/st_QC_normed_BC_project_PsoADLP.h5')
     # Remove LP
-    spatial_adata = spatial_adata[spatial_adata.obs['DISEASE'] != 'LP'].copy()
+    mask = (spatial_adata.obs['DISEASE'] == 'LP') & (spatial_adata.obs['biopsy_type'] == 'LESIONAL')
+    spatial_adata = spatial_adata[~mask].copy()
 
     main(adata=spatial_adata, save_folder=savepath)

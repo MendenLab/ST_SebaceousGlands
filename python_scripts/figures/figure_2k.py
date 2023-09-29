@@ -23,7 +23,7 @@ fontsize_legend = 18
 
 def plot_boxplot(adata, df_melt, num_patterns, specimen, disease, biopsy_type, save_folder, obs='SEBACEOUS GLAND'):
 
-    box_pairs = [((p, 0), (p, 1)) for p in range(num_patterns)]
+    box_pairs = [((p, 0), (p, 1)) for p in range(1, num_patterns + 1)]
 
     fig, ax = plt.subplots(figsize=(10, 6))
     sns.boxplot(
@@ -112,6 +112,8 @@ def main(path_adata, save_folder):
 
     adata = sc.read(os.path.join(path_adata, 'st_QC_normed_BC_project_PsoAD.h5'))
 
+    n_pattern = 9
+
     specimens = []
     writer = pd.ExcelWriter(os.path.join(save_folder, "Boxplots_Pattern.xlsx"), engine='xlsxwriter')
 
@@ -126,8 +128,8 @@ def main(path_adata, save_folder):
     biopsy_type = adata_sample.obs['biopsy_type'].cat.categories[0]
     disease = adata_sample.obs['DISEASE'].cat.categories[0]
 
-    patterns = pd.DataFrame(index=adata_sample.obs.index, columns=np.arange(0, 9))
-    for pattern in range(0, 9):
+    patterns = pd.DataFrame(index=adata_sample.obs.index, columns=np.arange(1, n_pattern + 1))
+    for pattern in range(1, n_pattern + 1):
         patterns.loc[:, pattern] = adata_sample.obs.loc[:, 'Pattern_intensity_{}'.format(pattern)]
 
     pvals, df_melt = calculate_enrichment_pattern_sebaceousglands(
@@ -139,7 +141,7 @@ def main(path_adata, save_folder):
         adata.uns['spot_type_colors'][
             adata.obs['spot_type'].cat.categories.str.contains(
                 'SEBACEOUS GLAND')][0] if val == 1 else "grey" for val in df_melt['SEBACEOUS GLAND']]
-    test_result = plot_boxplot(adata, df_melt, num_patterns=9, specimen=specimen, disease=disease,
+    test_result = plot_boxplot(adata, df_melt, num_patterns=n_pattern, specimen=specimen, disease=disease,
                                biopsy_type=biopsy_type, save_folder=save_folder, obs='SEBACEOUS GLAND')
 
     test_result = [result.__dict__ for result in test_result]
@@ -164,7 +166,7 @@ def main(path_adata, save_folder):
         df.loc[ind, 'mean_values_box1'] = mean_box1
         df.loc[ind, 'mean_values_box2'] = mean_box2
 
-    # Save figure parameters to excel file
+    # Save figure parameters to Excel file
     df_melt.to_excel(writer, sheet_name="Plot_{}_{}_{}".format(
         specimen, disease, "".join(next(zip(*biopsy_type.split(' '))))), index=False)
     df.to_excel(writer, sheet_name="Stats_{}_{}_{}".format(
@@ -181,6 +183,6 @@ if __name__ == '__main__':
         "figure_2k_spatialDE_SG_enrichment", str(today))
     os.makedirs(savepath, exist_ok=True)
 
-    adata_path = '/Volumes/CH__data/Projects/Eyerich_AG_projects/ST_Sebaceous_glands__Peter_Seiringer/output/spatialDE/2023-04-12_paper_figures'
+    adata_path = '/Volumes/CH__data/Projects/Eyerich_AG_projects/ST_Sebaceous_glands__Peter_Seiringer/output/spatialDE/2023-09-18_paper_figures_pattern_1_to_9'
 
     main(path_adata=adata_path, save_folder=savepath)

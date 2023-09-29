@@ -16,17 +16,18 @@ library(forcats)
 
 `%nin%` = Negate(`%in%`)
 
+project.dir <- '/Volumes/CH__data/Projects/Eyerich_AG_projects/ST_Sebaceous_glands__Peter_Seiringer'
 
 # Source R-scripts
-source('/Users/christina.hillig/PycharmProjects/ST_SG_publication/ST_SebaceousGlands/r_scripts/spatialDE/init.R')
-source('/Users/christina.hillig/PycharmProjects/ST_SG_publication/ST_SebaceousGlands/r_scripts/spatialDE/load_data.R')
-source('/Users/christina.hillig/PycharmProjects/ST_SG_publication/ST_SebaceousGlands/r_scripts/spatialDE/utils.R')
+source(file.path(project.dir, 'ST_SebaceousGlands/r_scripts/spatialDE/init.R'))
+source(file.path(project.dir, 'ST_SebaceousGlands/r_scripts/spatialDE/load_data.R'))
+source(file.path(project.dir, 'ST_SebaceousGlands/r_scripts/spatialDE/utils.R'))
 # R-script to plot the ORA results
-source("/Users/christina.hillig/PycharmProjects/ST_SG_publication/ST_SebaceousGlands/r_scripts/spatialDE/ORA_GSEA_plots.R")
+source(file.path(project.dir, "ST_SebaceousGlands/r_scripts/spatialDE/ORA_GSEA_plots.R"))
 
 
 # Date
-date = "2023-04-12"
+date = "2023-09-18"
 # Data set 
 dataset.type = 'patient'
 # Sequencing technique
@@ -39,7 +40,7 @@ create_plot = FALSE
 design.function = "None"
 
 # General input directory
-input.dir = file.path('/Volumes/CH__data/Projects/Eyerich_AG_projects/ST_Sebaceous_glands__Peter_Seiringer/output/spatialDE', 
+input.dir = file.path(project.dir, 'output', 'spatialDE', 
                       paste(date, '_paper_figures', sep =""))
 
 # Cut parameter
@@ -63,18 +64,20 @@ selected.database = 'Reactome'
 
 
 ## Output
-output.folder = file.path('/Volumes/CH__data/Projects/Eyerich_AG_projects/ST_Sebaceous_glands__Peter_Seiringer/output/spatialDE', 
-                          paste(date, '_paper_figures', sep =""), 'Pathway_enrichment_analysis',
-                          'Figure2def')
+output.folder = file.path(
+  project.dir, 'output', 'spatialDE', 
+  paste(date, '_paper_figures', sep =""), 
+  'Pathway_enrichment_analysis', 'Figure2def')
 # General output directory
 output.dir <- get_outputdir(output.folder = output.folder, dataset.type = dataset.type,
                             func_task='ORA_REACTOME', func_comparison=comparison)
 
 ##### Load files
 # 1. Get all DGE .csv files in subfolders
-all_filenames = list.files(path = input.dir, pattern = c("*.xlsx"), recursive = TRUE, full.names=T)
+all_filenames = list.files(path = input.dir, pattern = c("*.xlsx"), 
+                           recursive = TRUE, full.names=T)
 # 2. read out filename
-degs.name = all_filenames[grepl("*AEH*", all_filenames) & grepl("*corrected*", all_filenames)]
+degs.name = all_filenames[grepl("*AEH*", all_filenames)] # & grepl("*corrected*", all_filenames)]
 # Get unique specimens
 # specimens <- sapply(str_split(sapply(str_split(degs.name, pattern='_'), "[[", 10), pattern='/'), "[[", 5)
 specimens <- sapply(str_split(sapply(
@@ -88,7 +91,7 @@ specimen <- "11-V19T12-012-V2"
 
 # Create specimen specific output directory
 tmp_output.dir <- file.path(output.dir, specimen)
-dir.create(tmp_output.dir, recursive = TRUE)
+dir.create(tmp_output.dir, recursive = TRUE, showWarnings = FALSE)
 
 # Get filenames
 filename = degs.name[grepl(paste(specimen, '*'), degs.name)]
@@ -167,7 +170,8 @@ for (pattern.name in patterns)
   # TODO save in another sheet in same excel file
   save_enrichobject_as_csv(
     paenrich_object = enricher.ref, comparison=specimen,
-    condition = ref_group, df.parameters=df.parameters, pattern=pattern.name,
+    condition = ref_group, df.parameters=df.parameters, 
+    pattern=pattern.name,
     pa_database = selected.database, method='ORA', 
     output_path = tmp_output.dir)
   
@@ -180,10 +184,12 @@ for (pattern.name in patterns)
     if (nrow(enricher.ref) > 1 & length(unique(enricher.ref@result$ID)) > 1) 
     {
       def.plot.enricher_barplot(
-        enricher.result=enricher.ref, showCategories=15, method=paste('Pattern', pattern.name), 
+        enricher.result=enricher.ref, showCategories=15, 
+        method=paste('Pattern', pattern.name),
         title=paste(selected.database,ref_group, specimen, pattern.name,
                     'ORA_barplot.pdf', sep = "_"),
-        width=width_img, height=height_img, output.dir=tmp_output.dir, func_colours=NULL) 
+        width=width_img, height=height_img, 
+        output.dir=tmp_output.dir, func_colours=NULL) 
     }
   }
   
@@ -207,8 +213,9 @@ for (pattern.name in patterns)
 }
 
 # Rearrange order of list objects in list
-sig.pathways.pattern.v2 <- list(sig.pathways.pattern$`0`, sig.pathways.pattern$`8`, sig.pathways.pattern$`6`)
-names(sig.pathways.pattern.v2) <- c('0', '8', '6')
+sig.pathways.pattern.v2 <- list(
+  sig.pathways.pattern$`1`, sig.pathways.pattern$`9`, sig.pathways.pattern$`7`)
+names(sig.pathways.pattern.v2) <- c('1', '9', '7')
 
 pdf(file = file.path(tmp_output.dir, paste0("VennDiagram_enriched_pathways", specimen, ".pdf")),   
     width = 6, # The width of the plot in inches

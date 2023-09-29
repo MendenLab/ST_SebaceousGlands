@@ -1,6 +1,7 @@
 import scanpy as sc
 import pandas as pd
 import numpy as np
+from operator import itemgetter
 
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -51,8 +52,22 @@ def main(path_adata, save_folder):
     disease = adata_sample.obs['DISEASE'].cat.categories[0]
     sample = adata_sample.obs['sample'].cat.categories[0]
 
+    # remove JUNCTION
+    mask = adata_sample.obs['spot_type'] == 'JUNCTION'
+    mask_middle_epidermis = adata_sample.obs['middle EPIDERMIS'] == 1
+    mask_basal_epidermis = adata_sample.obs["basal EPIDERMIS"] == 1
+    mask_dermis = adata_sample.obs['DERMIS'] == 1
+    adata_sample.obs.loc[mask & mask_middle_epidermis, 'spot_type'] = 'middle EPIDERMIS'
+    adata_sample.obs.loc[mask & mask_basal_epidermis, 'spot_type'] = 'basal EPIDERMIS'
+    adata_sample.obs.loc[mask & mask_dermis, "spot_type"] = "DERMIS"
+    adata_sample.obs['spot_type'] = adata_sample.obs['spot_type'].cat.remove_unused_categories()
+
+    colors_spottype = dict(zip(adata.obs['spot_type'].cat.categories.to_list(), [
+        "#1f77b4", "#ff7f0e", "#279e68", '#e377c2', '#8c564b', '#aa40fc', '#b5bd61', '#17becf', '#aec7e8']))
+
     fig, ax = plt.subplots(figsize=(6, 8))
-    sc.pl.spatial(adata=adata_sample, color='spot_type', library_id=sample, ax=ax, title='', show=False)
+    sc.pl.spatial(adata=adata_sample, color='spot_type', library_id=sample, ax=ax, title='', show=False,
+                  palette=itemgetter(*adata_sample.obs['spot_type'].cat.categories.to_list())(colors_spottype))
     if invert_x[specimen]:
         ax.invert_xaxis()
     if invert_y[specimen]:
@@ -67,10 +82,8 @@ def main(path_adata, save_folder):
     plt.close()
 
     # convert spot types to colors
-    color_mapping = dict(
-        zip(adata_sample.obs['spot_type'].cat.categories, list(adata_sample.uns['spot_type_colors'])))
-    colors = pd.DataFrame(list(adata_sample.obs['spot_type'].values), columns=['spot_type'])
-    colors = colors.replace({"spot_type": color_mapping})
+    colors = pd.DataFrame(adata_sample.obs['spot_type'].to_list(), columns=['spot_type'])
+    colors = colors.replace({"spot_type": colors_spottype})
 
     df = pd.DataFrame.from_dict({
         'spatial_x': adata_sample.obsm['spatial'][:, 1] * adata_sample.uns['spatial'][sample]['scalefactors'][
@@ -78,12 +91,12 @@ def main(path_adata, save_folder):
         'spatial_y': adata_sample.obsm['spatial'][:, 0] * adata_sample.uns['spatial'][sample]['scalefactors'][
             'tissue_hires_scalef'],
         'color': colors.values.T[0],
-        'spot_type': list(adata_sample.obs['spot_type'].values)})
+        'spot_type': adata_sample.obs['spot_type'].to_list()})
 
     df['spot_type'] = df['spot_type'].astype('category')
     df['spot_type'] = df['spot_type'].cat.reorder_categories(list(adata_sample.obs['spot_type'].cat.categories))
 
-    # Save figure parameters to excel file
+    # Save figure parameters to Excel file
     df.to_excel(writer, sheet_name="Plot_{}_{}_{}".format(
         specimen, disease, "".join(next(zip(*biopsy_type.split(' '))))), index=False)
 

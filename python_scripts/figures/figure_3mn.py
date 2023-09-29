@@ -1,6 +1,6 @@
 import scanpy as sc
 import pandas as pd
-import numpy as np
+from operator import itemgetter
 
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -36,9 +36,21 @@ def main(path_adata, save_folder):
     h5files = ['2-V19S23-004-V4_2_AD_LESIONAL', '10-V19T12-025-V4_10_Pso_LESIONAL']
 
     adata = sc.read(os.path.join(path_adata, 'st_QC_normed_BC_project_PsoAD.h5'))
-    adata.uns['spot_type_colors'] = np.asarray(
-        ['#1f77b4', '#ff7f0e', '#279e68', '#d62728', '#e377c2', '#8c564b',
-         '#aa40fc', '#b5bd61', '#17becf', '#aec7e8'])
+
+    # remove JUNCTION
+    mask = adata.obs["spot_type"] == "JUNCTION"
+    mask_upper_epidermis = adata.obs["upper EPIDERMIS"] == 1
+    mask_middle_epidermis = adata.obs["middle EPIDERMIS"] == 1
+    mask_basal_epidermis = adata.obs["basal EPIDERMIS"] == 1
+    mask_dermis = adata.obs["DERMIS"] == 1
+    adata.obs.loc[mask & mask_upper_epidermis, "spot_type"] = "upper EPIDERMIS"
+    adata.obs.loc[mask & mask_middle_epidermis, "spot_type"] = "middle EPIDERMIS"
+    adata.obs.loc[mask & mask_basal_epidermis, "spot_type"] = "basal EPIDERMIS"
+    adata.obs.loc[mask & mask_dermis, "spot_type"] = "DERMIS"
+    adata.obs["spot_type"] = adata.obs["spot_type"].cat.remove_unused_categories()
+
+    colors_spottype = dict(zip(adata.obs['spot_type'].cat.categories.to_list(), [
+        "#1f77b4", "#ff7f0e", "#279e68", '#e377c2', '#8c564b', '#aa40fc', '#b5bd61', '#17becf', '#aec7e8']))
 
     specimens = []
     writer = pd.ExcelWriter(os.path.join(save_folder, "Plots_HE_images_spottypes.xlsx"), engine='xlsxwriter')
@@ -58,7 +70,8 @@ def main(path_adata, save_folder):
         sample = adata_sample.obs['sample'].cat.categories[0]
 
         fig, ax = plt.subplots(figsize=(8, 6))
-        sc.pl.spatial(adata=adata_sample, color='spot_type', library_id=sample, ax=ax, title='', show=False)
+        sc.pl.spatial(adata=adata_sample, color='spot_type', library_id=sample, ax=ax, title='', show=False,
+                      palette=itemgetter(*adata_sample.obs['spot_type'].cat.categories.to_list())(colors_spottype))
         if invert_x[specimen]:
             ax.invert_xaxis()
         if invert_y[specimen]:
@@ -70,22 +83,20 @@ def main(path_adata, save_folder):
         plt.close()
 
         # convert spot types to colors
-        color_mapping = dict(zip(adata_sample.obs['spot_type'].cat.categories,
-                                 list(adata_sample.uns['spot_type_colors'])))
-        colors = pd.DataFrame(list(adata_sample.obs['spot_type'].values), columns=['spot_type'])
-        colors = colors.replace({"spot_type": color_mapping})
+        colors = pd.DataFrame(adata_sample.obs['spot_type'].to_list(), columns=['spot_type'])
+        colors = colors.replace({"spot_type": colors_spottype})
 
         df = pd.DataFrame.from_dict({'spatial_x': adata_sample.obsm[
                 'spatial'][:, 1] * adata_sample.uns['spatial'][sample]['scalefactors']['tissue_hires_scalef'],
                                      'spatial_y': adata_sample.obsm[
                 'spatial'][:, 0] * adata_sample.uns['spatial'][sample]['scalefactors']['tissue_hires_scalef'],
                                      'color': colors.values.T[0],
-                                     'spot_type': list(adata_sample.obs['spot_type'].values)})
+                                     'spot_type': adata_sample.obs['spot_type'].to_list()})
 
         df['spot_type'] = df['spot_type'].astype('category')
         df['spot_type'] = df['spot_type'].cat.reorder_categories(list(adata_sample.obs['spot_type'].cat.categories))
 
-        # Save figure parameters to excel file
+        # Save figure parameters to Excel file
         df.to_excel(writer, sheet_name="Plot_{}_{}_{}".format(
             specimen, disease, "".join(next(zip(*biopsy_type.split(' '))))), index=False)
 
@@ -97,7 +108,7 @@ if __name__ == '__main__':
     today = date.today()
     savepath = os.path.join(
         "/Volumes/CH__data/Projects/Eyerich_AG_projects/ST_Sebaceous_glands__Peter_Seiringer/output",
-        "figure_3hn__spatialDE_HE_images", str(today))
+        "figure_3mn__spatialDE_HE_images", str(today))
     os.makedirs(savepath, exist_ok=True)
 
     adata_path = '/Volumes/CH__data/Projects/Eyerich_AG_projects/ST_Sebaceous_glands__Peter_Seiringer/output/spatialDE/2023-04-12_paper_figures'

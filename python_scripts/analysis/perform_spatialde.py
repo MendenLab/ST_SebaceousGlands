@@ -118,7 +118,7 @@ def plot_lengthscales(results, mean_lengthscale, specimen, biopsy_type, disease,
 
 def plot_boxplot(adata, df_melt, num_patterns, specimen, biopsy_type, save_folder, obs='SEBACEOUS GLAND'):
 
-    box_pairs = [((p, 0), (p, 1)) for p in range(num_patterns)]
+    box_pairs = [((p, 0), (p, 1)) for p in range(1, num_patterns + 1)]
 
     fig, ax = plt.subplots()
     sns.boxplot(
@@ -158,9 +158,10 @@ def plot_aeh(coord_sample, histology_results, patterns, num_patterns, specimen, 
     # Plot AEH patterns
     for i in range(num_patterns):
         ax = fig.add_subplot(3, math.ceil(num_patterns / 3), i + 1)
-        img = ax.scatter(coord_sample['x'], coord_sample['y'], c=patterns[i], s=2)
+        img = ax.scatter(coord_sample['x'], coord_sample['y'], c=patterns[i + 1], s=2)
         ax.invert_yaxis()
-        ax.set_title('Pattern {} - {} genes'.format(i, histology_results.query('pattern == @i').shape[0]), fontsize=8)
+        ax.set_title('Pattern {} - {} genes'.format(i + 1, histology_results.query('pattern == @i').shape[0]),
+                     fontsize=8)
         cb = plt.colorbar(img, ax=ax)
         cb.ax.tick_params(labelsize=6)
         ax.axes.get_xaxis().set_visible(False)
@@ -181,14 +182,15 @@ def plot_aeh_clustered(coord_sample, histology_results, patterns, num_patterns, 
 
     for i in range(num_patterns):
         km = KMeans(n_clusters=4, random_state=0)
-        labels = km.fit_predict(np.asarray(patterns[i]).reshape(-1, 1))
+        labels = km.fit_predict(np.asarray(patterns[i + 1]).reshape(-1, 1))
 
         fig = plt.figure(figsize=(5, 2))
         # Plot AEH pattern intensity
         ax = fig.add_subplot(1, 2, 1)
-        img = ax.scatter(coord_sample['x'], coord_sample['y'], c=patterns[i], s=5)
+        img = ax.scatter(coord_sample['x'], coord_sample['y'], c=patterns[i + 1], s=5)
         ax.invert_yaxis()
-        ax.set_title('Pattern {} - {} genes'.format(i, histology_results.query('pattern == @i').shape[0]), fontsize=6)
+        ax.set_title('Pattern {} - {} genes'.format(i + 1, histology_results.query('pattern == @i').shape[0]),
+                     fontsize=6)
         cb = plt.colorbar(img, ax=ax)
         cb.ax.tick_params(labelsize=6)
         ax.axes.get_xaxis().set_visible(False)
@@ -219,7 +221,7 @@ def calculate_enrichment_pattern_sebaceousglands(adata_sample, patterns, obs='SE
     df_patterns_annot[obs] = adata_sample.obs[obs]
 
     pvals = []
-    # df_patterns_annot[obs] == 1 -> 1 if spot_type is in spot 0 if its not
+    # df_patterns_annot[obs] == 1 -> 1 if spot_type is in spot 0 if it's not
     mask_sebaceousglands = df_patterns_annot[obs] == 1
     for pattern in patterns.columns:
         stats, pval = mannwhitneyu(
@@ -244,7 +246,7 @@ def similarity_pattern(patterns, n_pattern, highest_similarity):
 
     if n_pattern > 1:
         similarity_list = []
-        comb_patterns = list(combinations(range(n_pattern), 2))
+        comb_patterns = list(combinations(range(1, n_pattern + 1), r=2))
         for tuple_pattern in comb_patterns:
             # Normalise pattern intensities between 0 and 1
             normed_values_0 = normalize_data(data=np.asarray(patterns[tuple_pattern[0]].values))
@@ -279,6 +281,10 @@ def get_aeh(adata, adata_sample, coord_sample, res, ms_results, n_pattern, mean_
     # membership: Maximal posterior pattern assignment probability
     print(histology_results_tmp.head())
 
+    # add + 1 to pattern to start counting at 1
+    histology_results_tmp['pattern'] = histology_results_tmp['pattern'] + 1
+    patterns.columns = patterns.columns + 1
+
     # Boxplot of Pattern Intensities with stats test
     pvals, df_melt = calculate_enrichment_pattern_sebaceousglands(
         adata_sample=adata_sample, patterns=patterns, obs='SEBACEOUS GLAND')
@@ -286,7 +292,7 @@ def get_aeh(adata, adata_sample, coord_sample, res, ms_results, n_pattern, mean_
     # Add Patterns to adata.obs
     for ind_pval, pval in enumerate(pvals):
         adata.obs.loc[(adata.obs['specimen'] == specimen),
-                      'Pattern_intensity_{}'.format(ind_pval)] = patterns[ind_pval]
+                      'Pattern_intensity_{}'.format(ind_pval + 1)] = patterns[ind_pval + 1]
 
     # It is usually interesting to see what the coexpressed genes determining a
     # histological pattern are:
@@ -330,6 +336,7 @@ def main(path_adata, save_folder):
         disease = adata_sample.obs['DISEASE'].cat.categories[0]
 
         save_folder_tmp = os.path.join(save_folder, specimen)
+        os.makedirs(save_folder_tmp, exist_ok=True)
 
         # Plot H&E image with spot types
         fig, ax = plt.subplots()
@@ -397,7 +404,7 @@ def main(path_adata, save_folder):
             results['Gene_class'] = results['Gene_class'].astype('category')
 
             # In regular differential expression analysis, we usually investigate the relation between
-            # significance and effect size by so called volcano plots. We don't have the concept of fold change
+            # significance and effect size by 'so called' volcano plots. We don't have the concept of fold change
             # in our case, but we can investigate the fraction of variance explained by spatial variation.
             plot_spatial_variance(
                 df_results=results, specimen=specimen, save_folder=save_folder_tmp, biopsy_type=biopsy_type)
@@ -422,6 +429,11 @@ def main(path_adata, save_folder):
                 histology_results_type, patterns_type = SpatialDE.aeh.spatial_patterns(
                     X=coord_sample, exp_mat=res[ms_results_type['g']], DE_mll_results=ms_results_type,
                     C=1, l=mean_lengthscale, verbosity=1)
+
+                # add + 1 to pattern to start counting at 1
+                histology_results_type["pattern"] = histology_results_type["pattern"] + 1
+                patterns_type.columns = patterns_type.columns + 1
+
                 ms_results_type.to_excel(os.path.join(save_folder_tmp, '{}_{}_{}_{}.xlsx'.format(
                     specimen, disease, biopsy_type, pattern_type)))
 
@@ -461,7 +473,7 @@ def main(path_adata, save_folder):
 
             similarity_step = highest_similarity[0]
 
-            print("Highest similarity of {} for {} pattern".format(similarity_step, n_pattern-1))
+            print("Highest similarity of {} for {} pattern".format(similarity_step, n_pattern))
 
             # Store histology_results
             histology_results = histology_results_list[0]
@@ -473,7 +485,7 @@ def main(path_adata, save_folder):
             histology_results['SEBACEOUS GLAND'] = 0
             for ind_pval, pval in enumerate(pvals_list[0]):
                 if pval < 0.05:
-                    histology_results.loc[histology_results['pattern'] == ind_pval, 'SEBACEOUS GLAND'] = 1
+                    histology_results.loc[histology_results['pattern'] == ind_pval + 1, 'SEBACEOUS GLAND'] = 1
 
             filename_aeh = os.path.join(save_folder_tmp, 'AEH__{}.csv'.format(specimen))
             histology_results.to_csv(filename_aeh)

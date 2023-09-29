@@ -206,6 +206,8 @@ df$NA. <- NULL
 df <- df %>% rename("log2FoldChange" = "log2fc")
 df <- df %>% rename("hgnc_symbol" = "gene_symbol")
 
+# Number of DEGs: 5449
+
 # Plot Volcano plot
 pdf(file = file.path(output.dir, paste0('NL_SG_vs_NL_RestofSkin', '_Volcanoplot', '.pdf')), 
     width = 6, height = 6)

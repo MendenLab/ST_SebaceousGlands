@@ -1,6 +1,7 @@
 import scanpy as sc
 import pandas as pd
 import numpy as np
+from operator import itemgetter
 
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -32,7 +33,7 @@ def plot_image(img_rotated, df, disease, specimen, biopsy_type, save_folder, inv
     plt.close()
 
 
-def export_legend(legend, save_folder, ncol, key, filename="legend", expand=[-5, -5, 5, 5]):
+def export_legend(legend, save_folder, ncol, key, filename="legend", expand=None):
     # https://stackoverflow.com/questions/4534480/get-legend-as-a-separate-picture-in-matplotlib
     fig = legend.figure
     sns.despine(left=True, bottom=True, fig=fig)
@@ -41,6 +42,8 @@ def export_legend(legend, save_folder, ncol, key, filename="legend", expand=[-5,
     bbox = legend.get_window_extent()
     bbox = bbox.from_extents(*(bbox.extents + np.array(expand)))
     bbox = bbox.transformed(fig.dpi_scale_trans.inverted())
+    for i in range(len(legend.legendHandles)):
+        legend.legendHandles[i]._legmarker.set_markersize(30)
     # fig.tight_layout()
     fig.savefig(os.path.join(save_folder, "{}_{}_{}{}".format(filename, ncol, key, '.pdf')), dpi='figure',
                 bbox_inches=bbox)
@@ -48,12 +51,39 @@ def export_legend(legend, save_folder, ncol, key, filename="legend", expand=[-5,
 
 
 def main(path_adata, save_folder):
-    h5files = ['10-V19T12-025-V3_10_Pso_LESIONAL', '11-V19T12-012-V1_11_AD_NON LESIONAL', '2-V19S23-004-V3_2_AD_LESIONAL']
+    h5files = ['10-V19T12-025-V3_10_Pso_LESIONAL', '11-V19T12-012-V1_11_AD_NON LESIONAL',
+               '2-V19S23-004-V3_2_AD_LESIONAL']
 
     adata = sc.read(os.path.join(path_adata, 'st_QC_normed_BC_project_PsoAD.h5'))
-    adata.uns['spot_type_colors'] = np.asarray(
-        ['#1f77b4', '#ff7f0e', '#279e68', '#d62728', '#e377c2', '#8c564b',
-         '#aa40fc', '#b5bd61', '#17becf', '#aec7e8'])
+    # remove JUNCTION
+    mask = adata.obs["spot_type"] == "JUNCTION"
+    mask_middle_epidermis = adata.obs["middle EPIDERMIS"] == 1
+    mask_basal_epidermis = adata.obs["basal EPIDERMIS"] == 1
+    mask_upper_epidermis = adata.obs["upper EPIDERMIS"] == 1
+    mask_dermis = adata.obs["DERMIS"] == 1
+    adata.obs.loc[mask & mask_middle_epidermis, "spot_type"] = "middle EPIDERMIS"
+    adata.obs.loc[mask & mask_basal_epidermis, "spot_type"] = "basal EPIDERMIS"
+    adata.obs.loc[mask & mask_upper_epidermis, "spot_type"] = "upper EPIDERMIS"
+    adata.obs.loc[mask & mask_dermis, "spot_type"] = "DERMIS"
+    adata.obs["spot_type"] = adata.obs["spot_type"].cat.remove_unused_categories()
+    
+    colors_spottype = dict(zip(adata.obs['spot_type'].cat.categories.to_list(), [
+        "#1f77b4", "#ff7f0e", "#279e68", '#e377c2', '#8c564b', '#aa40fc', '#b5bd61', '#17becf', '#aec7e8']))
+
+    # Plot legend separately - Needs to be run in debugging mode
+    colors_st = itemgetter(*adata.obs["spot_type"].cat.categories.to_list())(
+        colors_spottype
+    )
+    labels = list(adata.obs["spot_type"].cat.categories)
+    f = lambda m, c: plt.plot([], [], marker="o", color=c, ls="none")[0]
+    handles = [f("s", colors_st[i]) for i in range(len(colors_st))]
+    
+    legend = plt.legend(
+        handles, labels, loc=3, framealpha=1, frameon=False, ncol=9, prop={"size": 30}
+    )
+    export_legend(
+        legend, save_folder=save_folder, ncol=10, key="spot_type", expand=[-5, -5, 5, 5]
+    )
 
     specimens = []
     writer = pd.ExcelWriter(os.path.join(save_folder, "Plots_HE_images_spottypes.xlsx"), engine='xlsxwriter')
@@ -74,7 +104,8 @@ def main(path_adata, save_folder):
 
         fig, ax = plt.subplots(figsize=(10, 10))
         sc.pl.spatial(adata=adata_sample, color='spot_type', library_id=sample, ax=ax, title='', show=False,
-                      legend_loc='best')
+                      legend_loc='best',
+                      palette=itemgetter(*adata_sample.obs['spot_type'].cat.categories.to_list())(colors_spottype))
         if invert_x[specimen]:
             ax.invert_xaxis()
         if invert_y[specimen]:
@@ -88,31 +119,21 @@ def main(path_adata, save_folder):
         plt.savefig(os.path.join(save_folder, 'HE_image_{}_{}_{}.pdf'.format(specimen, disease, biopsy_type)))
         plt.close()
 
-        # Plot legend separately - Needs to be run in debugging mode
-        labels = list(adata.obs['spot_type'].cat.categories)
-        f = lambda m, c: plt.plot([], [], marker='o', color=c, ls="none")[0]
-        handles = [f("s", adata.uns['spot_type_colors'][i]) for i in range(len(adata.uns['spot_type_colors']))]
-
-        legend = plt.legend(handles, labels, loc=3, framealpha=1, frameon=False, ncol=10, prop={'size': 22})
-        export_legend(legend, save_folder=save_folder, ncol=10, key='spot_type')
-
         # convert spot types to colors
-        color_mapping = dict(zip(adata_sample.obs['spot_type'].cat.categories,
-                                 list(adata_sample.uns['spot_type_colors'])))
-        colors = pd.DataFrame(list(adata_sample.obs['spot_type'].values), columns=['spot_type'])
-        colors = colors.replace({"spot_type": color_mapping})
+        colors = pd.DataFrame(adata_sample.obs['spot_type'].to_list(), columns=['spot_type'])
+        colors = colors.replace({"spot_type": colors_spottype})
 
         df = pd.DataFrame.from_dict({'spatial_x': adata_sample.obsm[
                 'spatial'][:, 1] * adata_sample.uns['spatial'][sample]['scalefactors']['tissue_hires_scalef'],
                                      'spatial_y': adata_sample.obsm[
                 'spatial'][:, 0] * adata_sample.uns['spatial'][sample]['scalefactors']['tissue_hires_scalef'],
                                      'color': colors.values.T[0],
-                                     'spot_type': list(adata_sample.obs['spot_type'].values)})
+                                     'spot_type': adata_sample.obs['spot_type'].to_list()})
 
         df['spot_type'] = df['spot_type'].astype('category')
         df['spot_type'] = df['spot_type'].cat.reorder_categories(list(adata_sample.obs['spot_type'].cat.categories))
 
-        # Save figure parameters to excel file
+        # Save figure parameters to Excel file
         df.to_excel(writer, sheet_name="Plot_{}_{}_{}".format(
             specimen, disease, "".join(next(zip(*biopsy_type.split(' '))))), index=False)
 
@@ -121,12 +142,11 @@ def main(path_adata, save_folder):
 
 if __name__ == '__main__':
     # create saving folder in current project path
+    general_path = '/Volumes/CH__data/Projects/Eyerich_AG_projects/ST_Sebaceous_glands__Peter_Seiringer/output'
     today = date.today()
-    savepath = os.path.join(
-        "/Volumes/CH__data/Projects/Eyerich_AG_projects/ST_Sebaceous_glands__Peter_Seiringer/output",
-        "Fig_S2abc", str(today))
+    savepath = os.path.join(general_path, "Fig_S2abc", str(today))
     os.makedirs(savepath, exist_ok=True)
 
-    adata_path = '/Volumes/CH__data/Projects/Eyerich_AG_projects/ST_Sebaceous_glands__Peter_Seiringer/output/spatialDE/2023-04-12_paper_figures'
+    adata_path = os.path.join(general_path, 'spatialDE', '2023-04-12_paper_figures')
 
     main(path_adata=adata_path, save_folder=savepath)

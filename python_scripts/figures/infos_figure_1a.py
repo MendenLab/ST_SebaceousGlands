@@ -10,6 +10,18 @@ from datetime import date
 
 
 def main(adata, save_folder):
+    # drop all samples from newest cohort
+    new_samples = list(adata.obs['sample'].cat.categories[adata.obs['sample'].cat.categories.str.contains('P21093')])
+    adata_spots = adata[~adata.obs['sample'].isin(new_samples)].copy()
+    # Number of spots without new and P16357_1039: 14866
+    print('Total number of transcriptomes: ', adata_spots.shape[0])
+    print(pd.crosstab(adata_spots.obs['DISEASE'], adata_spots.obs['biopsy_type']))
+
+    # Pso: 6 NL + 6 L
+    # AD: 8 NL + 10 L
+    # LP: 10 NL
+
+    # ======================
     # Read out number of patient which have SG spots
     adata = adata[adata.obs['SEBACEOUS GLAND'] == 1].copy()
     # drop unuseable sample
@@ -52,7 +64,8 @@ if __name__ == '__main__':
 
     spatial_adata = sc.read(
         '/Volumes/CH__data/Projects/data/annData_objects/spatial/2022-04-08/st_QC_normed_BC_project_PsoADLP.h5')
-    # Remove LP & Pso
-    spatial_adata = spatial_adata[spatial_adata.obs['DISEASE'] != 'LP'].copy()
+    # Remove LP
+    mask = (spatial_adata.obs['DISEASE'] == 'LP') & (spatial_adata.obs['biopsy_type'] == 'LESIONAL')
+    spatial_adata = spatial_adata[~mask].copy()
 
     main(adata=spatial_adata, save_folder=savepath)

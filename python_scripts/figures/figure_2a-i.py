@@ -22,8 +22,8 @@ def plot_aeh(coord_sample, histology_results, patterns, num_patterns, specimen, 
 
     fig = plt.figure(figsize=figsize)
     # Plot AEH patterns
-    for i in range(num_patterns):
-        ax = fig.add_subplot(3, math.ceil(num_patterns / 3), i + 1)
+    for i in range(1, num_patterns + 1):
+        ax = fig.add_subplot(3, math.ceil(num_patterns / 3), i)
         if specimen == 'SN-V11J13-122_B_20':
             img = ax.scatter(coord_sample['y'], coord_sample['x'], c=patterns[i], s=2)
         else:
@@ -49,9 +49,13 @@ def plot_aeh(coord_sample, histology_results, patterns, num_patterns, specimen, 
 
 def main(path_adata, save_folder):
     h5files = [name for name in os.listdir(path_adata) if os.path.isdir(os.path.join(path_adata, name))]
-    h5files.remove('Pathway_enrichment_analysis')
+    try:
+        h5files.remove('Pathway_enrichment_analysis')
+    except ValueError:
+        print('No Pathway_enrichment_analysis folder in path')
 
     adata = sc.read(os.path.join(path_adata, 'st_QC_normed_BC_project_PsoAD.h5'))
+    n_pattern = 9
 
     specimens = []
     writer = pd.ExcelWriter(os.path.join(save_folder, "Plots_AEH_Pattern.xlsx"), engine='xlsxwriter')
@@ -75,11 +79,14 @@ def main(path_adata, save_folder):
 
     histology_results = pd.read_csv(os.path.join(path_adata, filename, 'AEH__{}.csv'.format(specimen)), index_col=0)
 
-    patterns = pd.DataFrame(index=adata_sample.obs.index, columns=np.arange(0, 9))
-    for pattern in range(0, 9):
+    patterns = pd.DataFrame(index=adata_sample.obs.index, columns=np.arange(1, n_pattern + 1))
+    for pattern in range(1, n_pattern + 1):
         patterns.loc[:, pattern] = adata_sample.obs.loc[:, 'Pattern_intensity_{}'.format(pattern)]
 
-    plot_aeh(coord_sample=coord_sample, histology_results=histology_results, patterns=patterns, num_patterns=9,
+    # pattern 1-9
+    pattern_numbers = np.arange(1, n_pattern + 1)
+    patterns.columns = pattern_numbers
+    plot_aeh(coord_sample=coord_sample, histology_results=histology_results, patterns=patterns, num_patterns=n_pattern,
              specimen=specimen, biopsy_type=biopsy_type, save_folder=save_folder, invert=invert[specimen],
              disease=disease, figsize=figure_sizes[specimen])
 
@@ -87,7 +94,7 @@ def main(path_adata, save_folder):
     df['x'] = coord_sample['x']
     df['y'] = coord_sample['y']
     num_patterns = []
-    for i in range(0, 9):
+    for i in range(1, n_pattern + 1):
         num_patterns.append(histology_results.query('pattern == @i').shape[0])
     num_patterns.extend([np.nan, np.nan])
     df.loc['number of genes'] = num_patterns
@@ -107,6 +114,6 @@ if __name__ == '__main__':
         "figure_2ai__spatialDE_AEH_patterns", str(today))
     os.makedirs(savepath, exist_ok=True)
 
-    adata_path = '/Volumes/CH__data/Projects/Eyerich_AG_projects/ST_Sebaceous_glands__Peter_Seiringer/output/spatialDE/2023-04-12_paper_figures'
+    adata_path = '/Volumes/CH__data/Projects/Eyerich_AG_projects/ST_Sebaceous_glands__Peter_Seiringer/output/spatialDE/2023-09-18_paper_figures_pattern_1_to_9'
 
     main(path_adata=adata_path, save_folder=savepath)
