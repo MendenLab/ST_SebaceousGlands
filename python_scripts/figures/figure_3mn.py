@@ -32,75 +32,99 @@ def plot_image(img_rotated, df, disease, specimen, biopsy_type, save_folder, inv
     plt.close()
 
 
-def main(path_adata, save_folder):
+def main(path_adata, save_folder, path_to_df):
     h5files = ['2-V19S23-004-V4_2_AD_LESIONAL', '10-V19T12-025-V4_10_Pso_LESIONAL']
+    invert_x = {"2-V19S23-004-V4_2": True, "10-V19T12-025-V4_10": True}
+    invert_y = {"2-V19S23-004-V4_2": True, "10-V19T12-025-V4_10": True}
 
-    adata = sc.read(os.path.join(path_adata, 'st_QC_normed_BC_project_PsoAD.h5'))
+    if os.path.isfile(path_to_df):
+        # Read out specimen
+        for filename in h5files:
+            print('File: {}'.format(filename))
+            specimen = "_".join(filename.split(sep="_")[:-2])
+            df = pd.read_excel(path_to_df, index_col=0, sheet_name=specimen)
 
-    # remove JUNCTION
-    mask = adata.obs["spot_type"] == "JUNCTION"
-    mask_upper_epidermis = adata.obs["upper EPIDERMIS"] == 1
-    mask_middle_epidermis = adata.obs["middle EPIDERMIS"] == 1
-    mask_basal_epidermis = adata.obs["basal EPIDERMIS"] == 1
-    mask_dermis = adata.obs["DERMIS"] == 1
-    adata.obs.loc[mask & mask_upper_epidermis, "spot_type"] = "upper EPIDERMIS"
-    adata.obs.loc[mask & mask_middle_epidermis, "spot_type"] = "middle EPIDERMIS"
-    adata.obs.loc[mask & mask_basal_epidermis, "spot_type"] = "basal EPIDERMIS"
-    adata.obs.loc[mask & mask_dermis, "spot_type"] = "DERMIS"
-    adata.obs["spot_type"] = adata.obs["spot_type"].cat.remove_unused_categories()
+            biopsy_type = df['biopsy_type'].unique()[0]
+            disease = df['disease'].unique()[0]
 
-    colors_spottype = dict(zip(adata.obs['spot_type'].cat.categories.to_list(), [
-        "#1f77b4", "#ff7f0e", "#279e68", '#e377c2', '#8c564b', '#aa40fc', '#b5bd61', '#17becf', '#aec7e8']))
+            palette = dict(zip(df["spot_type"], df["color"]))
 
-    specimens = []
-    writer = pd.ExcelWriter(os.path.join(save_folder, "Plots_HE_images_spottypes.xlsx"), engine='xlsxwriter')
+            fig, ax = plt.subplots(figsize=(8, 6))
+            sns.scatterplot(data=df, x="spatial_x", y="spatial_y", hue="spot_type", s=18, ax=ax,linewidth=0,edgecolor="k",
+                            palette=itemgetter(*list(df["spot_type"].unique()))(palette))
+            if invert_x[specimen]:
+                ax.invert_xaxis()
+            if invert_y[specimen]:
+                ax.invert_yaxis()
+            ax.axes.get_xaxis().set_visible(False)
+            ax.axes.get_yaxis().set_visible(False)
+            plt.tight_layout()
+            plt.savefig(os.path.join(save_folder, 'HE_image_{}_{}_{}.pdf'.format(specimen, disease, biopsy_type)))
+            plt.close()
+    else:
+        adata = sc.read(os.path.join(path_adata, 'st_QC_normed_BC_project_PsoAD.h5'))
 
-    invert_x = {'2-V19S23-004-V4_2': True, '10-V19T12-025-V4_10': True}
-    invert_y = {'2-V19S23-004-V4_2': True, '10-V19T12-025-V4_10': True}
+        # remove JUNCTION
+        mask = adata.obs["spot_type"] == "JUNCTION"
+        mask_upper_epidermis = adata.obs["upper EPIDERMIS"] == 1
+        mask_middle_epidermis = adata.obs["middle EPIDERMIS"] == 1
+        mask_basal_epidermis = adata.obs["basal EPIDERMIS"] == 1
+        mask_dermis = adata.obs["DERMIS"] == 1
+        adata.obs.loc[mask & mask_upper_epidermis, "spot_type"] = "upper EPIDERMIS"
+        adata.obs.loc[mask & mask_middle_epidermis, "spot_type"] = "middle EPIDERMIS"
+        adata.obs.loc[mask & mask_basal_epidermis, "spot_type"] = "basal EPIDERMIS"
+        adata.obs.loc[mask & mask_dermis, "spot_type"] = "DERMIS"
+        adata.obs["spot_type"] = adata.obs["spot_type"].cat.remove_unused_categories()
 
-    # Read out specimen
-    for filename in h5files:
-        print('File: {}'.format(filename))
+        colors_spottype = dict(zip(adata.obs['spot_type'].cat.categories.to_list(), [
+            'limegreen', 'mediumseagreen', 'darkgreen', '#e377c2', '#8c564b', '#aa40fc', '#b5bd61', '#17becf', '#aec7e8']))
 
-        specimen = "_".join(filename.split(sep='_')[:-2])
-        adata_sample = adata[adata.obs['specimen'] == specimen].copy()
-        specimens.append(specimen)
-        biopsy_type = adata_sample.obs['biopsy_type'].cat.categories[0]
-        disease = adata_sample.obs['DISEASE'].cat.categories[0]
-        sample = adata_sample.obs['sample'].cat.categories[0]
+        writer = pd.ExcelWriter(path_to_df, engine='xlsxwriter')
 
-        fig, ax = plt.subplots(figsize=(8, 6))
-        sc.pl.spatial(adata=adata_sample, color='spot_type', library_id=sample, ax=ax, title='', show=False,
-                      palette=itemgetter(*adata_sample.obs['spot_type'].cat.categories.to_list())(colors_spottype))
-        if invert_x[specimen]:
-            ax.invert_xaxis()
-        if invert_y[specimen]:
-            ax.invert_yaxis()
-        ax.axes.get_xaxis().set_visible(False)
-        ax.axes.get_yaxis().set_visible(False)
-        plt.tight_layout()
-        plt.savefig(os.path.join(save_folder, 'HE_image_{}_{}_{}.pdf'.format(specimen, disease, biopsy_type)))
-        plt.close()
+        # Read out specimen
+        for filename in h5files:
+            print('File: {}'.format(filename))
 
-        # convert spot types to colors
-        colors = pd.DataFrame(adata_sample.obs['spot_type'].to_list(), columns=['spot_type'])
-        colors = colors.replace({"spot_type": colors_spottype})
+            specimen = "_".join(filename.split(sep='_')[:-2])
+            adata_sample = adata[adata.obs['specimen'] == specimen].copy()
+            biopsy_type = adata_sample.obs['biopsy_type'].cat.categories[0]
+            disease = adata_sample.obs['DISEASE'].cat.categories[0]
+            sample = adata_sample.obs['sample'].cat.categories[0]
 
-        df = pd.DataFrame.from_dict({'spatial_x': adata_sample.obsm[
-                'spatial'][:, 1] * adata_sample.uns['spatial'][sample]['scalefactors']['tissue_hires_scalef'],
-                                     'spatial_y': adata_sample.obsm[
-                'spatial'][:, 0] * adata_sample.uns['spatial'][sample]['scalefactors']['tissue_hires_scalef'],
-                                     'color': colors.values.T[0],
-                                     'spot_type': adata_sample.obs['spot_type'].to_list()})
+            fig, ax = plt.subplots(figsize=(8, 6))
+            sc.pl.spatial(adata=adata_sample, color='spot_type', library_id=sample, ax=ax, title='', show=False,
+                          palette=itemgetter(*adata_sample.obs['spot_type'].cat.categories.to_list())(colors_spottype))
+            if invert_x[specimen]:
+                ax.invert_xaxis()
+            if invert_y[specimen]:
+                ax.invert_yaxis()
+            ax.axes.get_xaxis().set_visible(False)
+            ax.axes.get_yaxis().set_visible(False)
+            plt.tight_layout()
+            plt.savefig(os.path.join(save_folder, 'HE_image_{}_{}_{}.pdf'.format(specimen, disease, biopsy_type)))
+            plt.close()
 
-        df['spot_type'] = df['spot_type'].astype('category')
-        df['spot_type'] = df['spot_type'].cat.reorder_categories(list(adata_sample.obs['spot_type'].cat.categories))
+            # convert spot types to colors
+            colors = pd.DataFrame(adata_sample.obs['spot_type'].to_list(), columns=['spot_type'])
+            colors = colors.replace({"spot_type": colors_spottype})
 
-        # Save figure parameters to Excel file
-        df.to_excel(writer, sheet_name="Plot_{}_{}_{}".format(
-            specimen, disease, "".join(next(zip(*biopsy_type.split(' '))))), index=False)
+            df = pd.DataFrame.from_dict({'spatial_x': adata_sample.obsm[
+                    'spatial'][:, 0] * adata_sample.uns['spatial'][sample]['scalefactors']['tissue_hires_scalef'],
+                                         'spatial_y': adata_sample.obsm[
+                    'spatial'][:, 1] * adata_sample.uns['spatial'][sample]['scalefactors']['tissue_hires_scalef'],
+                                         'color': colors.values.T[0],
+                                         'spot_type': adata_sample.obs['spot_type'].to_list()})
 
-    writer.close()
+            df['spot_type'] = df['spot_type'].astype('category')
+            df['spot_type'] = df['spot_type'].cat.reorder_categories(list(adata_sample.obs['spot_type'].cat.categories))
+            df["disease"] = disease
+            df["biopsy_type"] = biopsy_type
+            df["specimen"] = specimen
+
+            # Save figure parameters to Excel file
+            df.to_excel(writer, sheet_name=specimen, index=False)
+
+        writer.close()
 
 
 if __name__ == '__main__':
@@ -111,6 +135,9 @@ if __name__ == '__main__':
         "figure_3mn__spatialDE_HE_images", str(today))
     os.makedirs(savepath, exist_ok=True)
 
-    adata_path = '/Volumes/CH__data/Projects/Eyerich_AG_projects/ST_Sebaceous_glands__Peter_Seiringer/output/spatialDE/2023-04-12_paper_figures'
+    adata_path = '/Volumes/CH__data/Projects/Eyerich_AG_projects/ST_Sebaceous_glands__Peter_Seiringer/output/spatialDE/2023-09-18_paper_figures'
 
-    main(path_adata=adata_path, save_folder=savepath)
+    path_df = os.path.join("/Volumes/CH__data/Projects/Eyerich_AG_projects/ST_Sebaceous_glands__Peter_Seiringer",
+                           "output", "figure_3mn__spatialDE_HE_images", "Figure_3mn.xlsx")
+
+    main(path_adata=adata_path, save_folder=savepath, path_to_df=path_df)

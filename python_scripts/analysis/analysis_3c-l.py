@@ -130,9 +130,9 @@ if __name__ == '__main__':
     # create saving folder in current project path
     savepath = os.path.join(
         "/Volumes/CH__data/Projects/Eyerich_AG_projects/ST_Sebaceous_glands__Peter_Seiringer/output",
-        "Analysis_3cn__spatialDE_SVGs")
+        "Analysis_3cl__spatialDE_SVGs")
     os.makedirs(savepath, exist_ok=True)
 
-    adata_path = '/Volumes/CH__data/Projects/Eyerich_AG_projects/ST_Sebaceous_glands__Peter_Seiringer/output/spatialDE/2023-04-12_paper_figures'
+    adata_path = '/Volumes/CH__data/Projects/Eyerich_AG_projects/ST_Sebaceous_glands__Peter_Seiringer/output/spatialDE/2023-09-18_paper_figures'
 
     main(path_adata=adata_path, save_folder=savepath)

@@ -1,7 +1,7 @@
 import scanpy as sc
 import numpy as np
 import pandas as pd
-import xlsxwriter
+from operator import itemgetter
 
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -21,15 +21,14 @@ fontsize_text = 20
 fontsize_legend = 18
 
 
-def plot_boxplot(adata, df_melt, num_patterns, specimen, disease, biopsy_type, save_folder, obs='SEBACEOUS GLAND'):
+def plot_boxplot(palette, df_melt, num_patterns, specimen, disease, biopsy_type, save_folder, obs='SEBACEOUS GLAND'):
 
     box_pairs = [((p, 0), (p, 1)) for p in range(1, num_patterns + 1)]
 
     fig, ax = plt.subplots(figsize=(10, 6))
     sns.boxplot(
         data=df_melt, x='variable', y='value', hue=obs, ax=ax,
-        palette=[adata.uns['spot_type_colors'][
-            adata.obs['spot_type'].cat.categories.str.contains(obs)][0], 'grey'])
+        palette=palette)
     ax, test_result = statannot.add_stat_annotation(
         ax, data=df_melt, x='variable', y='value', hue=obs, box_pairs=box_pairs,
         test='Mann-Whitney-gt', loc='inside', verbose=2, perform_stat_test=True, fontsize=fontsize_text)
@@ -49,8 +48,7 @@ def plot_boxplot(adata, df_melt, num_patterns, specimen, disease, biopsy_type, s
     plt.close('all')
 
     plotting_parameters = {'data': df_melt, 'x': 'variable', 'y': 'value', 'hue': obs,
-                           'palette': [adata.uns['spot_type_colors'][
-                                           adata.obs['spot_type'].cat.categories.str.contains(obs)][0], 'grey']}
+                           'palette': palette}
     # Transform each p-value to "p=" in scientific notation
     test_result_pvals = [result.__dict__['pval'] for result in test_result]
     formatted_pvalues = ["{:.2e}".format(pvalue) if pvalue < 0.05 else "ns" for pvalue in test_result_pvals]
@@ -108,71 +106,96 @@ def calculate_enrichment_pattern_sebaceousglands(adata_sample, patterns, obs='SE
     return pvals, df_melt
 
 
-def main(path_adata, save_folder):
-
-    adata = sc.read(os.path.join(path_adata, 'st_QC_normed_BC_project_PsoAD.h5'))
-
-    n_pattern = 9
-
-    specimens = []
-    writer = pd.ExcelWriter(os.path.join(save_folder, "Boxplots_Pattern.xlsx"), engine='xlsxwriter')
-
-    # Read out specimen
-    filename = '11-V19T12-012-V2_11_AD_NON LESIONAL'
-
-    print('File: {}'.format(filename))
-
-    specimen = "_".join(filename.split(sep='_')[:-2])
-    adata_sample = adata[adata.obs['specimen'] == specimen].copy()
-    specimens.append(specimen)
-    biopsy_type = adata_sample.obs['biopsy_type'].cat.categories[0]
-    disease = adata_sample.obs['DISEASE'].cat.categories[0]
-
-    patterns = pd.DataFrame(index=adata_sample.obs.index, columns=np.arange(1, n_pattern + 1))
-    for pattern in range(1, n_pattern + 1):
-        patterns.loc[:, pattern] = adata_sample.obs.loc[:, 'Pattern_intensity_{}'.format(pattern)]
-
-    pvals, df_melt = calculate_enrichment_pattern_sebaceousglands(
-        adata_sample=adata_sample, patterns=patterns, obs='SEBACEOUS GLAND')
-
-    df_melt['SEBACEOUS GLAND'] = df_melt['SEBACEOUS GLAND'].astype('category')
-    df_melt['SEBACEOUS GLAND'] = df_melt['SEBACEOUS GLAND'].cat.reorder_categories([1, 0])
-    df_melt['color'] = [
-        adata.uns['spot_type_colors'][
-            adata.obs['spot_type'].cat.categories.str.contains(
-                'SEBACEOUS GLAND')][0] if val == 1 else "grey" for val in df_melt['SEBACEOUS GLAND']]
-    test_result = plot_boxplot(adata, df_melt, num_patterns=n_pattern, specimen=specimen, disease=disease,
-                               biopsy_type=biopsy_type, save_folder=save_folder, obs='SEBACEOUS GLAND')
-
+def readout_stats(df_melt, test_result):
     test_result = [result.__dict__ for result in test_result]
     df = pd.DataFrame(test_result)
-
-    df['DeltaMean'] = 0
-    df['mean_values_box1'] = 0
-    df['mean_values_box2'] = 0
-    for ind, (box1, box2) in enumerate(zip(df['box1'], df['box2'])):
-        mask_1 = (df_melt['variable'] == box1[0]) & (df_melt['SEBACEOUS GLAND'] == box1[1])
-        mask_2 = (df_melt['variable'] == box2[0]) & (df_melt['SEBACEOUS GLAND'] == box2[1])
+    
+    df["DeltaMean"] = 0
+    df["mean_values_box1"] = 0
+    df["mean_values_box2"] = 0
+    for ind, (box1, box2) in enumerate(zip(df["box1"], df["box2"])):
+        mask_1 = (df_melt["variable"] == box1[0]) & (df_melt["SEBACEOUS GLAND"] == box1[1])
+        mask_2 = (df_melt["variable"] == box2[0]) & (df_melt["SEBACEOUS GLAND"] == box2[1])
         # Read out values
-        box1_values = df_melt.loc[mask_1, 'value'].values
-        box2_values = df_melt.loc[mask_2, 'value'].values
+        box1_values = df_melt.loc[mask_1, "value"].values
+        box2_values = df_melt.loc[mask_2, "value"].values
         # log2fc = log2(x/y) Fold change: (Y - X)/X
         # fold_change = (box2_values.mean() - box1_values.mean()) / box1_values.mean()
         mean_box1 = box1_values.mean()
         mean_box2 = box2_values.mean()
         # log2fc = np.log2(abs(box1_values.mean() / box2_values.mean()))
-        delta_mean = (box1_values.mean() - box2_values.mean())
-        df.loc[ind, 'DeltaMean'] = delta_mean
-        df.loc[ind, 'mean_values_box1'] = mean_box1
-        df.loc[ind, 'mean_values_box2'] = mean_box2
+        delta_mean = box1_values.mean() - box2_values.mean()
+        df.loc[ind, "DeltaMean"] = delta_mean
+        df.loc[ind, "mean_values_box1"] = mean_box1
+        df.loc[ind, "mean_values_box2"] = mean_box2
 
-    # Save figure parameters to Excel file
-    df_melt.to_excel(writer, sheet_name="Plot_{}_{}_{}".format(
-        specimen, disease, "".join(next(zip(*biopsy_type.split(' '))))), index=False)
-    df.to_excel(writer, sheet_name="Stats_{}_{}_{}".format(
-        specimen, disease, "".join(next(zip(*biopsy_type.split(' '))))), index=False)
+    return df
 
-    writer.close()
+
+def main(path_adata, save_folder, path_to_df):
+    specimens = []
+    # Read out specimen
+    filename = "11-V19T12-012-V2_11_AD_NON LESIONAL"
+    print("File: {}".format(filename))
+
+    n_pattern = 9
+
+    if os.path.isfile(path_to_df):
+        df_melt = pd.read_excel(path_to_df, sheet_name="Plot")
+        specimen = df_melt["specimen"].unique()[0]
+        biopsy_type = df_melt["biopsy_type"].unique()[0]
+        disease = df_melt["disease"].unique()[0]
+
+        df_melt["SEBACEOUS GLAND"] = df_melt['SEBACEOUS GLAND'].astype('category')
+        df_melt["SEBACEOUS GLAND"] = df_melt["SEBACEOUS GLAND"].cat.reorder_categories([1, 0])
+
+        palette = dict(zip(df_melt['SEBACEOUS GLAND'], df_melt['color']))
+        palette = list(itemgetter(*list(df_melt['SEBACEOUS GLAND'].cat.categories))(palette))
+
+        test_result = plot_boxplot(
+            palette=palette, df_melt=df_melt, num_patterns=n_pattern, specimen=specimen,  disease=disease,
+            biopsy_type=biopsy_type, save_folder=save_folder, obs='SEBACEOUS GLAND')
+
+        df = readout_stats(df_melt, test_result)
+
+    else:
+        adata = sc.read(os.path.join(path_adata, 'st_QC_normed_BC_project_PsoAD.h5'))
+        specimen = "_".join(filename.split(sep='_')[:-2])
+        adata_sample = adata[adata.obs['specimen'] == specimen].copy()
+        specimens.append(specimen)
+        biopsy_type = adata_sample.obs['biopsy_type'].cat.categories[0]
+        disease = adata_sample.obs['DISEASE'].cat.categories[0]
+
+        patterns = pd.DataFrame(index=adata_sample.obs.index, columns=np.arange(1, n_pattern + 1))
+        for pattern in range(1, n_pattern + 1):
+            patterns.loc[:, pattern] = adata_sample.obs.loc[:, 'Pattern_intensity_{}'.format(pattern)]
+
+        pvals, df_melt = calculate_enrichment_pattern_sebaceousglands(
+            adata_sample=adata_sample, patterns=patterns, obs='SEBACEOUS GLAND')
+
+        df_melt['SEBACEOUS GLAND'] = df_melt['SEBACEOUS GLAND'].astype('category')
+        df_melt['SEBACEOUS GLAND'] = df_melt['SEBACEOUS GLAND'].cat.reorder_categories([1, 0])
+        palette = [adata.uns['spot_type_colors'][
+            adata.obs['spot_type'].cat.categories.str.contains('SEBACEOUS GLAND')][0], 'grey']
+
+        color = dict(zip(df_melt["SEBACEOUS GLAND"].cat.categories, palette))
+        df_melt['color'] = itemgetter(*list(df_melt['SEBACEOUS GLAND']))(color)
+
+        test_result = plot_boxplot(palette=palette,
+                                   df_melt=df_melt, num_patterns=n_pattern, specimen=specimen, disease=disease,
+                                   biopsy_type=biopsy_type, save_folder=save_folder, obs='SEBACEOUS GLAND')
+
+        df = readout_stats(df_melt, test_result)
+
+        df_melt['disease'] = disease
+        df_melt['biopsy_type'] = biopsy_type
+        df_melt['specimen'] = specimen
+        # Save figure parameters to Excel file
+        writer = pd.ExcelWriter(path_to_df, engine='xlsxwriter')
+        df_melt.to_excel(writer, sheet_name="Plot", index=False)
+        df.to_excel(writer, sheet_name="Stats", index=False)
+
+        writer.close()
 
 
 if __name__ == '__main__':
@@ -183,6 +206,8 @@ if __name__ == '__main__':
         "figure_2k_spatialDE_SG_enrichment", str(today))
     os.makedirs(savepath, exist_ok=True)
 
-    adata_path = '/Volumes/CH__data/Projects/Eyerich_AG_projects/ST_Sebaceous_glands__Peter_Seiringer/output/spatialDE/2023-09-18_paper_figures_pattern_1_to_9'
+    adata_path = '/Volumes/CH__data/Projects/Eyerich_AG_projects/ST_Sebaceous_glands__Peter_Seiringer/output/spatialDE/2023-09-18_paper_figures'
 
-    main(path_adata=adata_path, save_folder=savepath)
+    path_df = os.path.join("/Volumes/CH__data/Projects/Eyerich_AG_projects/ST_Sebaceous_glands__Peter_Seiringer",
+                           "output", "figure_2k_spatialDE_SG_enrichment", "Figure_2k.xlsx")
+    main(path_adata=adata_path, save_folder=savepath, path_to_df=path_df)

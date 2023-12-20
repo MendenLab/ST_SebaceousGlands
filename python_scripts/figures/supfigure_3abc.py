@@ -202,6 +202,6 @@ if __name__ == '__main__':
     os.makedirs(savepath, exist_ok=True)
 
     input_path = os.path.join(input_dir, 'spatialDE/2023-09-18_paper_figures/Pathway_enrichment_analysis',
-                              'Figure2def/patient/ORA_REACTOME/Patterns/2023-09-18/11-V19T12-012-V2')
+                              'Figure_2lmn/patient/ORA_REACTOME/Patterns/2023-09-18/11-V19T12-012-V2')
 
     main(input_folder=input_path, save_folder=savepath)
