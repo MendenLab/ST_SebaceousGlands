@@ -67,7 +67,7 @@ selected.database = 'Reactome'
 output.folder = file.path(
   project.dir, 'output', 'spatialDE', 
   paste(date, '_paper_figures', sep =""), 
-  'Pathway_enrichment_analysis', 'Figure2def')
+  'Pathway_enrichment_analysis', 'Figure_2lmn')
 # General output directory
 output.dir <- get_outputdir(output.folder = output.folder, dataset.type = dataset.type,
                             func_task='ORA_REACTOME', func_comparison=comparison)
