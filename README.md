@@ -1,6 +1,6 @@
 # Spatial transcriptomics reveals altered lipid metabolism and inflammation-related gene expression of sebaceous glands in psoriasis and atopic dermatitis
 
-Peter Seiringer*, Christina Hillig*, Alexander Schäbitz, Manja Jargosch, Anna Caroline Pilz, 
+Authors: Peter Seiringer*, Christina Hillig*, Alexander Schäbitz, Manja Jargosch, Anna Caroline Pilz, 
 Stefanie Eyerich, Andrea Szegedi, Michaela Sochorová, Florian Gruber, Christos C Zouboulis, 
 Tilo Biedermann, Michael Menden†, Kilian Eyerich†, Daniel Törőcsik†  <br>
 
@@ -8,18 +8,30 @@ Tilo Biedermann, Michael Menden†, Kilian Eyerich†, Daniel Törőcsik†  <br
 †contributed equally as last authors <br>
 
 
-### ABSTRACT
-Sebaceous glands drive acne, however, their role in other inflammatory skin diseases remains unclear. 
-To shed light on their potential contribution to disease development, we investigated the spatial transcriptome of 
-sebaceous glands in psoriasis and atopic dermatitis patients across lesional and non-lesional human skin samples. 
-Both atopic dermatitis and psoriasis sebaceous glands expressed genes encoding key proteins for lipid metabolism and 
-transport such as ALOX15B, APOC1, FABP7, FADS1/2, FASN, PPARG, and RARRES1. Also, inflammation-related SAA1 was 
-identified as a common spatially variable gene. In atopic dermatitis, genes mainly related to lipid metabolism (
-e.g. ACAD8, FADS6, or EBP) as well as disease-specific genes, i.e., Th2 inflammation-related lipid-regulating HSD3B1 
-were differentially expressed. On the contrary, in psoriasis, more inflammation-related spatially variable genes (
-e.g. SERPINF1, FKBP5, IFIT1/3, DDX58) were identified. Other psoriasis-specific enriched pathways included lipid 
-metabolism (e.g. ACOT4, S1PR3), keratinization (e.g. LCE5A, KRT5/7/16), neutrophil degranulation, and antimicrobial 
-peptides (e.g. LTF, DEFB4A, S100A7-9). In conclusion, our results show that sebaceous glands contribute to skin 
-homeostasis with a cell type-specific lipid metabolism, which is influenced by the inflammatory microenvironment. 
-These findings further support that sebaceous glands are not bystanders in inflammatory skin diseases, but can actively 
-and differentially modulate inflammation in a disease-specific manner.
+## Summary
+Spatial transcriptomics of psoriasis and atopic dermatitis revealed that sebaceous glands consistently express lipid metabolism genes and the inflammation marker SAA1.
+Atopic dermatitis showed lipid-focused changes, while psoriasis displayed stronger inflammatory signatures including keratinization, neutrophil degranulation, and antimicrobial pathways.
+These results indicate sebaceous glands actively modulate inflammation in a disease-specific manner.
+
+
+## Spatial Transcriptomics Analysis of Sebaceous Glands
+- **Data**  
+  - 6 lesional vs. non-lesional skin samples from psoriasis and atopic dermatitis patients (~26k transcriptomes; 212 spots annotated as sebaceous glands).
+
+- **Pipeline**  
+  - Manual annotation → SpatialDE (SVG detection) → DEG analysis → Pathway enrichment.
+
+- **Non-Lesional Skin**  
+  - SGs identified by 5,449 DEGs.  
+  - Four spatial patterns significantly enriched (patterns 1, 7, 8, 9).  
+  - Key pathways: lipid/fatty acid/steroid/cholesterol metabolism and energy (pattern 9); mitochondrial/citric acid cycle, transport, cell cycle (patterns 1 & 7).
+
+- **Lesional Skin Insights**  
+  - Both AD and PSO: High expression of lipid metabolism/transport genes (ALOX15B, APOC1, FABP7, FADS1/2, FASN, PPARG, RARRES1) + inflammation-related SAA1.  
+  - AD-specific: ACAD8, FADS6, EBP, HSD3B1, CCL17 (lipid/Th2-inflammation related).  
+  - PSO-specific: SERPINF1, FKBP5, IFIT1/3, DDX58, ACOT4, S1PR3 (inflammatory/lipid) + keratinization and antimicrobial gene programs.
+
+- **Pathway Enrichment Highlights**  
+  - AD SGs: Cholesterol, fatty acid, steroid metabolism.  
+  - PSO SGs: Keratinization, antimicrobial peptides, neutrophil degranulation.  
+  - PSO vs. AD: Increased interferon signaling, keratinization, antimicrobial responses.
